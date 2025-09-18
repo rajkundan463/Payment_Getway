@@ -16,54 +16,55 @@ const id = {};
 
 const mongoose = require("mongoose");
 const connectionOptions = {
-	useNewUrlParser: true,
+	useNewUrlParser: true, 
 	useUnifiedTopology: true,
 };
+const mongoURI = process.env.mongodb || "mongodb://localhost:27017/upiPaymentGateway";
+mongoose.connect(mongoURI, connectionOptions).then(() => {
+	console.log("Connected to database");
+}).catch((err) => {
+	console.log("Unable to connect to database", err);
+});
 
-mongoose.connect(
-	process.env.connectionString,
-	connectionOptions,
-);
-mongoose.Promise = global.Promise;
 
-app.get("/",function(request,response){
-    response.send("UPI Payment Gateway")
+app.get("/", function (request, response) {
+	response.send("UPI Payment Gateway")
 });
 
 function formatDate(date, format) {
-    const ISTOptions = {
-        timeZone: 'Asia/Kolkata',
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit'
-    };
+	const ISTOptions = {
+		timeZone: 'Asia/Kolkata',
+		year: 'numeric',
+		month: '2-digit',
+		day: '2-digit',
+		hour: '2-digit',
+		minute: '2-digit',
+		second: '2-digit'
+	};
 
-    const ISTDate = date.toLocaleString('en-IN', ISTOptions);
-    
-    const map = {
-        mm: ISTDate.slice(3, 5),
-        dd: ISTDate.slice(0, 2),
-        yy: ISTDate.slice(8, 10),
-        yyyy: ISTDate.slice(6, 10)
-    };
-    
-    return format.replace(/dd|mm|yyyy/gi, (matched) => map[matched]);
+	const ISTDate = date.toLocaleString('en-IN', ISTOptions);
+
+	const map = {
+		mm: ISTDate.slice(3, 5),
+		dd: ISTDate.slice(0, 2),
+		yy: ISTDate.slice(8, 10),
+		yyyy: ISTDate.slice(6, 10)
+	};
+
+	return format.replace(/dd|mm|yyyy/gi, (matched) => map[matched]);
 }
 
 function stringToDate(dateString) {
-    // Split the string into day, month, and year components
-    const [day, month, year] = dateString.split('-').map(Number);
+	// Split the string into day, month, and year components
+	const [day, month, year] = dateString.split('-').map(Number);
 
-    // Create a new Date object with the components
-    const date = new Date(year, month - 1, day); // month is 0-based in JavaScript Date objects
+	// Create a new Date object with the components
+	const date = new Date(year, month - 1, day); // month is 0-based in JavaScript Date objects
 
-    // Set the time zone to Indian Standard Time (IST)
-    date.setTime(date.getTime() + (5.5 * 60 * 60 * 1000)); // 5.5 hours ahead for IST (5 hours + 30 minutes)
+	// Set the time zone to Indian Standard Time (IST)
+	date.setTime(date.getTime() + (5.5 * 60 * 60 * 1000)); // 5.5 hours ahead for IST (5 hours + 30 minutes)
 
-    return date;
+	return date;
 }
 
 String.prototype.shuffle = function () {
@@ -80,7 +81,7 @@ String.prototype.shuffle = function () {
 }
 
 async function checkPayment(client_txn_id, txn_date, user) {
-	
+
 	await axios
 		.post("https://merchant.upigateway.com/api/check_order_status", {
 			client_txn_id,
@@ -94,18 +95,18 @@ async function checkPayment(client_txn_id, txn_date, user) {
 				if (info.status === "success") {
 					clearInterval(id[client_txn_id].id);
 					user.client_txn_id = data.data.client_txn_id;
-                    user.upi_txn_id = data.data.upi_txn_id;
+					user.upi_txn_id = data.data.upi_txn_id;
 					user.amount = data.data.amount;
-                    user.status = true;
+					user.status = true;
 					user.txn_date = stringToDate(txn_date);
 					create(user);
 					delete id[client_txn_id];
 				} else if (info.status === "failure" || id[client_txn_id].time >= 100) {
 					clearInterval(id[client_txn_id].id);
 					user.client_txn_id = data.data.client_txn_id;
-                    user.upi_txn_id = data.data.upi_txn_id;
+					user.upi_txn_id = data.data.upi_txn_id;
 					user.amount = data.data.amount;
-                    user.status = false;
+					user.status = false;
 					user.txn_date = stringToDate(txn_date);
 					create(user);
 					delete id[client_txn_id];
@@ -123,7 +124,7 @@ async function checkPayment(client_txn_id, txn_date, user) {
 async function create(user) {
 	try {
 		const participant = new Participant(user);
-        await participant.save();
+		await participant.save();
 		return true;
 	} catch (e) {
 		console.log(e);
@@ -131,8 +132,8 @@ async function create(user) {
 	}
 }
 
-app.post("/pay",async function (req, res, next) {
-    let payload = req.body.payload;
+app.post("/pay", async function (req, res) {
+	let payload = req.body.payload;
 	payload["key"] = process.env.merchant_key;
 	payload["client_txn_id"] = UUID(0).uuid().toString().shuffle();
 	payload["p_info"] = "UPI Payment Gateway";
@@ -147,7 +148,7 @@ app.post("/pay",async function (req, res, next) {
 		mobileNo: payload.customer_mobile,
 	};
 
-    id[payload["client_txn_id"]] = { time: 0 };
+	id[payload["client_txn_id"]] = { time: 0 };
 	id[payload["client_txn_id"]].id = setInterval(
 		async () =>
 			await checkPayment(
@@ -171,25 +172,25 @@ app.post("/pay",async function (req, res, next) {
 	res.json(response);
 });
 
-app.post("/payCheck",async function (req, res, next) {
+app.post("/payCheck", async function (req, res, next) {
 	let payload = req.body;
 
-	if(!payload.client_txn_id || payload.client_txn_id === null) {
+	if (!payload.client_txn_id || payload.client_txn_id === null) {
 		return res.json({ status: false });
 	}
 
 	payload["key"] = process.env.merchant_key;
-	
-    let user = (
+
+	let user = (
 		await Participant.find({ client_txn_id: payload.client_txn_id })
 	)[0];
 
 	if (!user) {
 		return res.json({ status: false });
 	}
-    
+
 	payload["txn_date"] = formatDate(user.txn_date, "dd-mm-yyyy");
-	
+
 	let response = await axios
 		.post("https://merchant.upigateway.com/api/check_order_status", payload)
 		.then((res) => {
@@ -204,11 +205,11 @@ app.post("/payCheck",async function (req, res, next) {
 	res.json(response);
 });
 
-app.get("/getAllUser", async function(req, res, next) {
-	let response = await Participant.find({}).sort({'txn_date': -1});
+app.get("/getAllUser", async function (req, res, next) {
+	let response = await Participant.find({}).sort({ 'txn_date': -1 });
 	res.json(response);
 });
 
 app.listen(port, function () {
-    console.log("Started application on port %d", port)
+	console.log("Started application on port %d", port)
 });
