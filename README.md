@@ -1,7 +1,5 @@
 # UPI Payment Gateway
 
-  **https://youtu.be/Xlg78BR7krg**
-
 ## Tech 
 MERN Stack
 
@@ -27,10 +25,10 @@ MERN Stack
 
 👉 create .env file in **UPI-Payment-Gateway\server** folder(copy of .eve.sample file)
 
-    PORT=10000
+    
     merchant_key={write your merchant key of https://upigateway.com/}
     fronted_url=https://www.mitramgroup.in/receipt
-    connectionString=mongodb://localhost:27017/upiPaymentGateway
+  
 
 👉 fronted_url means it is redirect url for payment gateway. localhost not working for that that's why enter random any site for testing.
 
@@ -62,14 +60,3 @@ MERN Stack
 
 👉 Copy API Key and paste in .env file for merchant key.
 
-## Download Node JS : 
-
-  **https://nodejs.org/en/download/**
-
-## Download MongoDB Compass : 
-
-  **https://www.mongodb.com/try/download/compass**
-
-## Youtube Channel : 
- 
-  **https://www.youtube.com/DarshanParmarK**
